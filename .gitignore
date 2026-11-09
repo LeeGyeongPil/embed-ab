@@ -1,0 +1,30 @@
+# Python (root-anchored so nothing under src/ or tests/ is ever hidden)
+__pycache__/
+*.py[cod]
+/.venv/
+/.pytest_cache/
+/.ruff_cache/
+/.mypy_cache/
+/*.egg-info/
+/dist/
+/build/
+
+# Local run outputs (the tool itself writes to ~/.cache/embed-ab by default)
+/reports/
+/evalset/
+/out/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# OS / editors
+.DS_Store
+/.vscode/
+/.idea/
+
+# Example outputs created by README walkthroughs (root-anchored)
+/my-set/
+/mine/
+/report/

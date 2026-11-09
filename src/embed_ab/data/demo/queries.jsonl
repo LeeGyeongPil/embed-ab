@@ -1,0 +1,40 @@
+{"_id": "q01", "text": "자동으로 백업해 주는 사본은 보관기간이 어떻게 되나요?"}
+{"_id": "q02", "text": "수동으로 백업본을 만드는 메뉴가 어디에 있나요?"}
+{"_id": "q03", "text": "복원하는 순간 지금 작성중인 노트들은 덮어써지나요?"}
+{"_id": "q04", "text": "백업을 저장할 폴더를 외장디스크로 바꾸려는데 설정 항목이 어디죠?"}
+{"_id": "q05", "text": "암호를 건 노트북은 백업해도 암호화돼서 저장되나요?"}
+{"_id": "q06", "text": "첨부된 이미지들 때문에 백업이 느린데 용량을 줄이는 옵션이 있나요?"}
+{"_id": "q07", "text": "백업에 실패했을 때 상태표시줄에 경고가 뜨는 이유가 뭐죠?"}
+{"_id": "q08", "text": "노트 한 건만 마크다운이나 PDF 같은 형식으로 내보낼 수 있나요?"}
+{"_id": "q09", "text": "동기화를 시작하려면 먼저 로그인해야 하나요? 처음에는 시간이 오래 걸리나요?"}
+{"_id": "q10", "text": "노트를 두 기기에서 동시에 편집하면 충돌본은 이름이 어떻게 붙나요?"}
+{"_id": "q11", "text": "오프라인으로 작성한 글은 네트워크 연결 후에 자동 업로드되나요?"}
+{"_id": "q12", "text": "모바일 데이터가 아깝지 않게 와이파이로만 동기화되도록 하고 싶어요"}
+{"_id": "q13", "text": "동기화 이력은 어디서 보고, 어떤 기기가 노트를 수정했는지도 나오나요?"}
+{"_id": "q14", "text": "삭제한 노트를 휴지통에서 복구할 수 있는 기간이 궁금해요"}
+{"_id": "q15", "text": "무료 요금제에서 계정마다 동기화 용량이 얼마까지 가능한가요?"}
+{"_id": "q16", "text": "분실한 기기에서 로그아웃시키려면 웹 계정 페이지를 이용하면 되나요?"}
+{"_id": "q17", "text": "앱을 잠그면 실행할 때마다 지문이나 비밀번호를 요구하나요?"}
+{"_id": "q18", "text": "노트북 암호를 잃어버리면 복구할 수 있는 방법이 있나요?"}
+{"_id": "q19", "text": "서버에는 종단간 암호화 데이터만 저장돼서 운영자도 노트를 못 읽는다던데 맞나요?"}
+{"_id": "q20", "text": "이중인증을 쓰면 새 기기에서 로그인할 때 일회용 코드를 입력해야 하나요?"}
+{"_id": "q21", "text": "화면캡처를 방지하면 스크린샷이 까맣게 찍히나요?"}
+{"_id": "q22", "text": "공유링크는 만료일과 비밀번호를 정할 수 있고 공유 취소도 되나요?"}
+{"_id": "q23", "text": "사용통계를 서버로 보내는 설정이 기본으로 꺼져 있나요?"}
+{"_id": "q24", "text": "보안취약점을 발견했을 때는 신고 주소로 보내면 3일 안에 답장을 받나요?"}
+{"_id": "q25", "text": "How do I jump to a note by typing part of its name?"}
+{"_id": "q26", "text": "Can I look for a specific sentence instead of separate keywords?"}
+{"_id": "q27", "text": "Filtering notes by label in the search box"}
+{"_id": "q28", "text": "Why are my freshly imported notes not showing up in search results?"}
+{"_id": "q29", "text": "Is it possible to find words that appear inside scanned documents?"}
+{"_id": "q30", "text": "Where can I keep a frequently used query handy?"}
+{"_id": "q31", "text": "Restrict results to notes edited in the past seven days"}
+{"_id": "q32", "text": "The search finds notes even when I misspell a word, can I disable that?"}
+{"_id": "q33", "text": "How do I install an extension manually?"}
+{"_id": "q34", "text": "Can an add-on read my files without asking me?"}
+{"_id": "q35", "text": "Which function creates a new note from code?"}
+{"_id": "q36", "text": "My script gets killed after a few seconds, what is the limit?"}
+{"_id": "q37", "text": "What are the steps for sharing my own plugin with other users?"}
+{"_id": "q38", "text": "A misbehaving add-on stopped working by itself; how do I turn it back on?"}
+{"_id": "q39", "text": "Where does an extension keep its configuration, and how do I reset it?"}
+{"_id": "q40", "text": "Do visual themes need any special access rights?"}

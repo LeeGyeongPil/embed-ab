@@ -1,0 +1,47 @@
+[build-system]
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
+
+[project]
+name = "embed-ab"
+version = "0.1.0"
+description = "A/B-test two embedding models on your own documents: Recall/nDCG/MRR with confidence intervals, per-query wins and losses, top-k overlap, and a CI gate."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.12"
+authors = [{ name = "LeeGyeongPil" }]
+keywords = ["rag", "embeddings", "retrieval", "evaluation", "ndcg", "bm25", "cli"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = ["numpy>=2.5.4,<3"]
+
+[project.optional-dependencies]
+st = ["sentence-transformers>=6.2.0,<7"]
+
+[project.scripts]
+embed-ab = "embed_ab.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/LeeGyeongPil/embed-ab"
+Issues = "https://github.com/LeeGyeongPil/embed-ab/issues"
+
+[dependency-groups]
+dev = ["pytest>=8", "rank-bm25==0.2.2"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/embed_ab"]
+
+[tool.hatch.build.targets.sdist]
+include = ["src/embed_ab", "tests", "README.md", "LICENSE", "CHANGELOG.md", "pyproject.toml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
