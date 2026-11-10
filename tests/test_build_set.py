@@ -91,3 +91,22 @@ def test_ollama_generator_parses_lines_with_fake_transport(monkeypatch):
 
 def test_unknown_llm_spec_exit_code(docs, tmp_path):
     assert main(["build-set", str(docs), "--llm", "gpt", "--out", str(tmp_path / "o")]) == 2
+
+
+class _FixedGen:
+    """Fake generator: question 0 copies exactly 3 of 5 words (0.6), question 1 copies 1 of 5."""
+
+    name = "fixed"
+
+    def questions(self, chunk, n):
+        return ["a b c x y", "a p q r s"][:n]
+
+
+def test_max_copy_boundary_drops_ratio_equal_to_threshold():
+    chunks = [chunk for chunk in [type("C", (), {"id": "d#0", "text": "a b c d e"})()]]
+    assert copy_ratio("a b c x y", chunks[0].text) == 0.6
+    result = build_evalset(chunks, _FixedGen(), per_chunk=2, max_copy=0.6)
+    # the 0.6 question is dropped (>= matches the warning rule); only the 0.2 one stays
+    assert list(result.evalset.queries.values()) == ["a p q r s"]
+    assert result.dropped == 1
+    assert result.warnings == []

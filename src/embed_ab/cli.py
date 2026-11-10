@@ -146,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
     b.add_argument("--per-chunk", type=int, default=1, help="questions per chunk (default 1)")
     b.add_argument("--chunk-chars", type=int, default=600, help="target chunk size in characters (default 600)")
     b.add_argument("--overlap", type=int, default=0, help="characters carried over between chunks (default 0)")
-    b.add_argument("--max-copy", type=_fraction, default=None, help="drop questions copying more than this share of chunk words (0-1)")
+    b.add_argument("--max-copy", type=_fraction, default=None, help="drop questions copying at least this share of chunk words (0-1)")
     b.add_argument("--max-queries", type=int, default=None, help="stop after N questions")
     b.add_argument("--max-chunks", type=int, default=None, help="use only the first N chunks")
     b.set_defaults(func=cmd_build_set)

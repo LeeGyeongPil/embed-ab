@@ -110,7 +110,7 @@ def build_evalset(
     for done, chunk in enumerate(chunks, start=1):
         for j, question in enumerate(generator.questions(chunk, per_chunk)):
             ratio = copy_ratio(question, chunk.text)
-            if max_copy is not None and ratio > max_copy:
+            if max_copy is not None and ratio >= max_copy:
                 dropped += 1
                 continue
             qid = f"q{len(queries) + 1:04d}"
@@ -124,7 +124,7 @@ def build_evalset(
     if not queries:
         raise EvalSetError(
             "No questions were produced"
-            + (f" (all {dropped} were above --max-copy {max_copy})." if dropped else ".")
+            + (f" (all {dropped} were at or above --max-copy {max_copy})." if dropped else ".")
             + " Check the --llm setting or raise --max-copy."
         )
     warnings: list[str] = []
