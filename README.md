@@ -26,7 +26,7 @@ embed-ab --version
 ```bash
 git clone https://github.com/LeeGyeongPil/embed-ab && cd embed-ab
 uv sync
-uv run embed-ab --version      # embed-ab 0.1.0
+uv run embed-ab --version      # embed-ab 0.1.1
 ```
 
 ## 빠르게 시작하기
@@ -248,7 +248,8 @@ flowchart LR
 | `error: Metric 'ndcg@5' does not match -k 10` | 게이트의 k 와 `-k` 가 다름 | `-k 5` 를 함께 주거나 `ndcg@10` 으로 게이트 |
 | `WARNING [few_queries]` | 질문이 30개 미만 | 질문을 늘림. 어려운 질문도 섞음 |
 | `WARNING [ceiling]` | 모든 모델이 거의 만점이라 구별 불가 | 더 어려운 질문(표현을 바꾼 질문)을 추가 |
-| `WARNING [copied_queries]` | 질문이 청크 문장을 그대로 베껴 BM25·단어 모델에 유리 | 실제 사용자 질문을 쓰거나 `build-set ... --max-copy 0.6` 으로 평가 세트를 다시 만듦(`--max-copy` 는 `compare` 가 아니라 `build-set` 옵션) |
+| `WARNING [copied_queries]` | 질문이 청크 문장을 그대로 베껴 BM25·단어 모델에 유리 | 실제 사용자 질문을 쓰거나 `build-set ... --max-copy 0.6` 으로 평가 세트를 다시 만듦(`--max-copy` 는 `compare` 가 아니라 `build-set` 옵션이며, 겹침 비율이 이 값 이상(>=)인 질문을 버립니다). 연습용 목(mock) 모드는 질문이 청크를 베끼므로 0.6 에서는 전부 버려져 오류가 날 수 있습니다 |
+| `error: No questions were produced (all 7 were at or above --max-copy 0.6)` | 연습용 목(mock) 모드로 만든 질문은 청크 문장을 베껴 `--max-copy 0.6` 에서 전부 버려짐 (종료 코드 2) | 실제 질문 생성기(`--llm ollama:<모델>`)를 쓰거나 `--max-copy` 를 올림(예: 0.7). 목 모드에서 값을 올리면 오류는 사라지지만 copied_queries 경고는 다시 뜰 수 있음(연습용이라 정상, 경고 없는 세트는 실제 질문 생성기로 만든다) |
 | `WARNING [not_significant]` | 차이의 신뢰구간이 0 을 포함 | 질문을 늘리거나 "차이 없음"으로 해석 |
 | Ollama 연결 오류 | 서버가 꺼져 있거나 모델 미설치 | `ollama serve`, `ollama pull bge-m3`, 필요하면 `OLLAMA_HOST` 지정 |
 
@@ -257,7 +258,7 @@ flowchart LR
 uv sync
 uv run pytest
 ```
-마지막 줄에 `76 passed` 가 보이면 정상입니다(설정에 이미 `-q` 가 있어 `-q` 를 또 붙이면 요약 줄이 사라집니다). 테스트 76개가 통과합니다(Python 3.12·3.13, 네트워크 차단 상태에서 실행). 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
+마지막 줄에 `77 passed` 가 보이면 정상입니다(설정에 이미 `-q` 가 있어 `-q` 를 또 붙이면 요약 줄이 사라집니다). 테스트 77개가 통과합니다(Python 3.12·3.13, 네트워크 차단 상태에서 실행). 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
 
 코드 지도(`src/embed_ab/`):
 

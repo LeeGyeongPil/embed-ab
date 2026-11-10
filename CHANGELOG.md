@@ -5,6 +5,11 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-10
+
+### Fixed
+- `--max-copy` now drops questions at or above the threshold (`>=`), matching the `copied_queries` warning rule, so `--max-copy 0.6` no longer leaves questions that still trigger the warning.
+
 ## [0.1.0] - 2026-11-10
 
 ### Added
