@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "embed-ab"
-version = "0.1.0"
+version = "0.1.1"
 description = "A/B-test two embedding models on your own documents: Recall/nDCG/MRR with confidence intervals, per-query wins and losses, top-k overlap, and a CI gate."
 readme = "README.md"
 license = { text = "MIT" }
