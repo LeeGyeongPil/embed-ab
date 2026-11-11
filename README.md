@@ -1,5 +1,7 @@
 # embed-ab
 
+**한국어** | [English](README.en.md)
+
 > **English summary** — `embed-ab` A/B-tests two embedding models (plus a BM25 baseline) on your own documents and reports Recall@k, nDCG@k, MRR@k with bootstrap confidence intervals, per-query wins and losses, and top-k overlap, as one static HTML file. Use it before swapping an embedding model or re-indexing a RAG store, or as a CI gate (`--fail-if-worse`). Try it offline: `uvx --from git+https://github.com/LeeGyeongPil/embed-ab embed-ab demo`.
 
 "모델을 바꿔도 검색이 나빠지지 않을까?"를 표본 질문 몇 개를 눈으로 비교하는 대신, 내 문서와 질문으로 **수치와 신뢰구간**을 뽑아 결정하게 해 주는 명령줄 도구입니다.
