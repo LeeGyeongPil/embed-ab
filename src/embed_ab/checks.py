@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from embed_ab.i18n import t
+
 MIN_QUERIES = 30
 CEILING_MEAN = 0.95
 CEILING_TIE_SHARE = 0.8
@@ -24,38 +26,32 @@ def run_checks(
     max_seq_lengths: dict[str, int | None] | None = None,
     metric: str = "ndcg",
 ) -> list[dict[str, Any]]:
-    """Return warnings as ``{"code", "message"}`` dicts (empty list = nothing suspicious)."""
+    """Return warnings as ``{"code", "message", "params"}`` dicts (empty list = nothing suspicious).
+
+    ``message`` is always English (it is stored in ``result.json``); ``params`` holds the numbers
+    so the text report and the HTML report can re-render the same warning in another language
+    with ``t("warn.<code>", **params)``. Callers drop ``params`` before writing JSON.
+    """
     out: list[dict[str, Any]] = []
+
+    def add(code: str, **params: Any) -> None:
+        out.append({"code": code, "message": t(f"warn.{code}", "en", **params), "params": params})
+
     if n_queries < MIN_QUERIES:
-        out.append({
-            "code": "few_queries",
-            "message": f"Only {n_queries} queries (< {MIN_QUERIES}): differences are easy to over-read. "
-            "Add more queries, ideally some hard ones.",
-        })
+        add("few_queries", n_queries=n_queries, min_queries=MIN_QUERIES)
     if (mean_a >= CEILING_MEAN and mean_b >= CEILING_MEAN) or tie_share >= CEILING_TIE_SHARE:
-        out.append({
-            "code": "ceiling",
-            "message": f"Score ceiling: both systems are near perfect or {tie_share:.0%} of queries tie on {metric}. "
-            "This evaluation set is too easy to tell the models apart.",
-        })
+        add("ceiling", tie_share=tie_share, metric=metric)
     lo, hi = ci
     if lo <= 0 <= hi:
-        out.append({
-            "code": "not_significant",
-            "message": f"The 95% confidence interval [{lo:+.3f}, {hi:+.3f}] of the {metric} difference includes 0: "
-            "the difference may be noise.",
-        })
+        add("not_significant", lo=lo, hi=hi, metric=metric)
     if copy_share >= COPY_SHARE_WARN:
-        out.append({
-            "code": "copied_queries",
-            "message": f"{copy_share:.0%} of queries reuse >= {COPY_THRESHOLD:.0%} of their answer chunk's words. "
-            "Lexical overlap favours BM25 and word-level models; mix in real user questions.",
-        })
+        add("copied_queries", copy_share=copy_share, threshold=COPY_THRESHOLD)
     for spec, limit in (max_seq_lengths or {}).items():
         if limit and max_chunk_chars > limit * CHARS_PER_TOKEN:
-            out.append({
-                "code": "chunk_truncation",
-                "message": f"{spec} reads at most {limit} tokens (~{limit * CHARS_PER_TOKEN} characters) but the "
-                f"longest chunk has {max_chunk_chars} characters: the tail is ignored. Use smaller chunks.",
-            })
+            add("chunk_truncation", spec=spec, limit=limit, approx=limit * CHARS_PER_TOKEN, max_chars=max_chunk_chars)
     return out
+
+
+def localize_warning(warning: dict[str, Any], lang: str | None = None) -> str:
+    """Render a warning from :func:`run_checks` in ``lang`` (default: the current language)."""
+    return t(f"warn.{warning['code']}", lang, **warning["params"])

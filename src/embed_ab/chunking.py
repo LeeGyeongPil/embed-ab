@@ -7,7 +7,8 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-from embed_ab.evalset import EvalSetError
+from embed_ab.evalset import EvalSetError, read_text_file
+from embed_ab.i18n import t
 
 TEXT_SUFFIXES = {".md", ".txt"}
 
@@ -33,9 +34,9 @@ def _split_long(paragraph: str, limit: int) -> list[str]:
 def chunk_text(text: str, chunk_chars: int = 600, overlap: int = 0) -> list[str]:
     """Pack paragraphs greedily into chunks of about ``chunk_chars`` characters."""
     if chunk_chars < 1:
-        raise EvalSetError("--chunk-chars must be at least 1.")
+        raise EvalSetError(t("err.chunk_chars"))
     if overlap < 0 or overlap >= chunk_chars:
-        raise EvalSetError("--overlap must be >= 0 and smaller than --chunk-chars.")
+        raise EvalSetError(t("err.overlap"))
     units: list[str] = []
     for para in re.split(r"\n\s*\n", text):
         para = " ".join(para.split())
@@ -67,22 +68,22 @@ def chunk_folder(folder: str | Path, chunk_chars: int = 600, overlap: int = 0) -
     """
     root = Path(folder)
     if not root.is_dir():
-        raise EvalSetError(f"Documents folder not found: {root}")
+        raise EvalSetError(t("err.docs_missing", root=root))
     chunks: list[Chunk] = []
     for path in sorted(p for p in root.rglob("*") if p.is_file()):
         rel = path.relative_to(root).as_posix()
         if path.suffix in TEXT_SUFFIXES:
-            for i, piece in enumerate(chunk_text(path.read_text(encoding="utf-8"), chunk_chars, overlap)):
+            for i, piece in enumerate(chunk_text(read_text_file(path), chunk_chars, overlap)):
                 chunks.append(Chunk(f"{rel}#{i:04d}", piece))
         elif path.suffix == ".jsonl":
-            for lineno, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            for lineno, line in enumerate(read_text_file(path).splitlines(), start=1):
                 if not line.strip():
                     continue
                 try:
                     obj = json.loads(line)
                     chunks.append(Chunk(str(obj["id"]), str(obj["text"])))
                 except (json.JSONDecodeError, KeyError, TypeError) as exc:
-                    raise EvalSetError(f'{rel} line {lineno}: expected {{"id", "text"}} JSON.') from exc
+                    raise EvalSetError(t("err.doc_row", rel=rel, lineno=lineno)) from exc
     if not chunks:
-        raise EvalSetError(f"No .md, .txt or .jsonl documents with text found under {root}.")
+        raise EvalSetError(t("err.no_docs", root=root))
     return chunks

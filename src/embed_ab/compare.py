@@ -17,6 +17,7 @@ from embed_ab.bm25 import BM25, TOKENIZERS
 from embed_ab.cache import EmbeddingCache
 from embed_ab.checks import COPY_THRESHOLD, run_checks
 from embed_ab.evalset import EvalSet, EvalSetError
+from embed_ab.i18n import t
 from embed_ab.overlap import jaccard_at_k, rbo_ext
 from embed_ab.paths import cache_subdir
 from embed_ab.providers import Embedder, make_embedder
@@ -33,6 +34,8 @@ class CompareResult:
     """Everything a report needs; ``data`` is plain JSON-serialisable data."""
 
     data: dict[str, Any] = field(default_factory=dict)
+    # numbers behind each entry of data["warnings"], kept out of the JSON so reports can re-render them
+    warning_params: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return self.data
@@ -46,11 +49,9 @@ def parse_metric_name(name: str, k: int) -> str:
     """Validate ``ndcg@10``-style names against the run's ``k``."""
     m = re.fullmatch(r"(recall|ndcg|mrr|hit)@(\d+)", name.strip().lower())
     if not m:
-        raise EvalSetError(
-            f"Unknown metric {name!r}. Use one of recall@K, ndcg@K, mrr@K, hit@K (for example ndcg@{k})."
-        )
+        raise EvalSetError(t("err.metric_unknown", name=name, k=k))
     if int(m.group(2)) != k:
-        raise EvalSetError(f"Metric {name!r} does not match -k {k}. Run with -k {m.group(2)} or gate on {m.group(1)}@{k}.")
+        raise EvalSetError(t("err.metric_k", name=name, k=k, metric_k=m.group(2), family=m.group(1)))
     return f"{m.group(1)}@{k}"
 
 
@@ -74,7 +75,7 @@ def _index_embedder(
             return fn(texts), 0, len(texts)
         return cache.embed(kind, texts, fn)
 
-    log(f"  indexing {len(doc_ids)} chunks with {emb.spec} ...")
+    log(t("log.indexing", n=len(doc_ids), spec=emb.spec))
     t0 = time.perf_counter()
     doc_vecs, h1, m1 = run("d", [evalset.corpus[d] for d in doc_ids], emb.embed_documents)
     index_s = time.perf_counter() - t0
@@ -111,11 +112,11 @@ def compare(
     ``bm25`` is ``"word"``, ``"char2"`` or ``None``. ``embedders`` injects ready-made embedders (tests).
     """
     if k < 1:
-        raise EvalSetError("-k must be at least 1.")
+        raise EvalSetError(t("err.k_min"))
     if bm25 is not None and bm25 not in TOKENIZERS:
-        raise EvalSetError(f"Unknown BM25 tokenizer {bm25!r}; choose one of {', '.join(TOKENIZERS)}.")
+        raise EvalSetError(t("err.bm25_unknown", name=bm25, choices=", ".join(TOKENIZERS)))
     if a == b and embedders is None:
-        raise EvalSetError("-a and -b are the same model; pick two different models to compare.")
+        raise EvalSetError(t("err.same_model"))
     ea, eb = embedders or (
         make_embedder(a, query_prompt=a_prompts[0], doc_prompt=a_prompts[1]),
         make_embedder(b, query_prompt=b_prompts[0], doc_prompt=b_prompts[1]),
@@ -127,7 +128,7 @@ def compare(
     systems: dict[str, dict[str, Any]] = {"A": _index_embedder(ea, evalset, k, use_cache, log),
                                           "B": _index_embedder(eb, evalset, k, use_cache, log)}
     if bm25:
-        log(f"  indexing BM25 ({bm25}) ...")
+        log(t("log.indexing_bm25", tokenizer=bm25))
         t0 = time.perf_counter()
         index = BM25([evalset.corpus[d] for d in doc_ids], bm25)
         index_s = time.perf_counter() - t0
@@ -175,7 +176,7 @@ def compare(
     copy_share = float(np.mean([r >= COPY_THRESHOLD for r in ratios]))
     pd = comparison["metrics"][primary]
     seq = {systems[s]["spec"]: systems[s]["info"].get("max_seq_length") for s in ("A", "B")}
-    warnings = run_checks(
+    found = run_checks(
         n_queries=len(q_ids),
         mean_a=float(per_query["A"][primary].mean()), mean_b=float(per_query["B"][primary].mean()),
         tie_share=pd["ties"] / len(q_ids), ci=(pd["ci_lo"], pd["ci_hi"]),
@@ -195,8 +196,7 @@ def compare(
             "name": "embed-ab", "version": _version("embed-ab"), "python": platform.python_version(),
             "numpy": _version("numpy"), "sentence_transformers": _version("sentence-transformers"),
         },
-        "mock_notice": "Practice mock mode: mock embedders are hashed n-gram vectors, not real models. "
-        "The numbers illustrate the method and say nothing about real model quality." if mock else None,
+        "mock_notice": t("mock.notice", "en") if mock else None,  # stored in English; reports re-render it
         "params": {"k": k, "seed": seed, "bootstrap": n_boot, "primary_metric": primary, "rbo_p": RBO_P,
                    "bm25": bm25, "copy_threshold": COPY_THRESHOLD},
         "evalset": {"documents": len(doc_ids), "queries": len(q_ids),
@@ -207,6 +207,6 @@ def compare(
                     "jaccard": [float(x) for x in jac], "rbo": [float(x) for x in rbo]},
         "queries": rows,
         "docs": {d: evalset.corpus[d][:160] for d in sorted(shown)},
-        "warnings": warnings,
+        "warnings": [{"code": w["code"], "message": w["message"]} for w in found],
     }
-    return CompareResult(result)
+    return CompareResult(result, [w["params"] for w in found])

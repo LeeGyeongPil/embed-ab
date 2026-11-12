@@ -9,6 +9,7 @@ from dataclasses import dataclass
 
 from embed_ab.chunking import Chunk
 from embed_ab.evalset import EvalSet, EvalSetError
+from embed_ab.i18n import t
 from embed_ab.providers import ProviderError, Transport, default_transport
 
 OLLAMA_PROMPT = (
@@ -69,7 +70,7 @@ class OllamaQuestionGen:
         try:
             body = self.transport(f"{host}/api/generate", payload, {})
         except ProviderError as exc:
-            raise ProviderError(f"{exc}. Is Ollama running and `ollama pull {self.model}` done?") from exc
+            raise ProviderError(t("err.ollama_gen_down", detail=exc, model=self.model)) from exc
         lines = [re.sub(r"^\s*(?:[-*]|\d+[.)])\s*", "", ln).strip() for ln in str(body.get("response", "")).splitlines()]
         return [ln for ln in lines if ln][:n]
 
@@ -79,7 +80,7 @@ def make_generator(spec: str, transport: Transport | None = None) -> MockQuestio
         return MockQuestionGen()
     if spec.startswith("ollama:") and len(spec) > len("ollama:"):
         return OllamaQuestionGen(spec.split(":", 1)[1], transport)
-    raise EvalSetError(f"Unknown --llm {spec!r}. Use 'mock' or 'ollama:<model>'.")
+    raise EvalSetError(t("err.llm_unknown", spec=spec))
 
 
 @dataclass
@@ -101,7 +102,7 @@ def build_evalset(
 ) -> BuildResult:
     """Generate one qrel-labelled question set; chunks are the ground truth for their questions."""
     if per_chunk < 1:
-        raise EvalSetError("--per-chunk must be at least 1.")
+        raise EvalSetError(t("err.per_chunk"))
     corpus = {c.id: c.text for c in chunks}
     queries: dict[str, str] = {}
     qrels: dict[str, dict[str, int]] = {}
@@ -122,18 +123,12 @@ def build_evalset(
         if max_queries is not None and len(queries) >= max_queries:
             break
     if not queries:
-        raise EvalSetError(
-            "No questions were produced"
-            + (f" (all {dropped} were at or above --max-copy {max_copy})." if dropped else ".")
-            + " Check the --llm setting or raise --max-copy."
-        )
+        part = t("err.no_questions_dropped", dropped=dropped, max_copy=max_copy) if dropped else ""
+        raise EvalSetError(t("err.no_questions", dropped_part=part))
     warnings: list[str] = []
     high = sum(r >= warn_threshold for r in ratios)
     if high:
-        warnings.append(
-            f"{high}/{len(ratios)} questions reuse >= {warn_threshold:.0%} of their chunk's words "
-            "(lexical-overlap bias favours BM25). Use --max-copy to filter, or add real questions."
-        )
+        warnings.append(t("warn.build_copy", high=high, total=len(ratios), threshold=warn_threshold))
     return BuildResult(EvalSet(corpus, queries, qrels), warnings, dropped)
 
 

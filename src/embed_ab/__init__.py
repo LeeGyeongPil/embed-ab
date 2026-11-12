@@ -4,7 +4,7 @@ from embed_ab.compare import CompareResult, compare
 from embed_ab.evalset import EvalSet, EvalSetError, load_evalset
 from embed_ab.providers import ProviderError
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 
 __all__ = [
     "CompareResult",

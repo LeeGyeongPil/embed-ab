@@ -1,6 +1,7 @@
 import socket
 from pathlib import Path
 
+import lang_env  # noqa: F401  (must run first: pins EMBED_AB_LANG=en at import time)
 import pytest
 
 from embed_ab import cli

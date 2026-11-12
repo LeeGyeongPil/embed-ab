@@ -17,13 +17,10 @@ from typing import Any, Protocol
 
 import numpy as np
 
+from embed_ab.i18n import describe_os_error, t
+
 HTTP_TIMEOUT_SECONDS = 600  # shared local servers can be slow; slowness is not an error
 MOCK_DIM = 512
-HF_HINT = (
-    "If the download fails on macOS or behind a proxy, try "
-    "SSL_CERT_FILE=/etc/ssl/cert.pem HF_HUB_DISABLE_XET=1; once the model is cached, "
-    "HF_HUB_OFFLINE=1 runs offline."
-)
 
 Transport = Callable[[str, dict[str, Any], dict[str, str]], dict[str, Any]]
 
@@ -52,12 +49,9 @@ def parse_spec(spec: str) -> tuple[str, str]:
     """Split ``scheme:model`` and validate the scheme."""
     scheme, sep, model = spec.partition(":")
     if not sep or not model:
-        raise ProviderError(
-            f"Invalid model spec {spec!r}. Use scheme:model, e.g. st:sentence-transformers/all-MiniLM-L6-v2, "
-            "ollama:bge-m3, openai:text-embedding-3-small, mock:word."
-        )
+        raise ProviderError(t("err.spec_invalid", spec=spec))
     if scheme not in {"mock", "st", "ollama", "openai"}:
-        raise ProviderError(f"Unknown provider {scheme!r} in {spec!r}. Choose one of: mock, st, ollama, openai.")
+        raise ProviderError(t("err.provider_unknown", scheme=scheme, spec=spec))
     return scheme, model
 
 
@@ -70,9 +64,9 @@ def default_transport(url: str, payload: dict[str, Any], headers: dict[str, str]
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", "replace")[:300]
-        raise ProviderError(f"HTTP {exc.code} from {url}: {body}") from exc
+        raise ProviderError(t("err.http", code=exc.code, url=url, body=body)) from exc
     except (urllib.error.URLError, OSError) as exc:
-        raise ProviderError(f"Cannot reach {url}: {exc}") from exc
+        raise ProviderError(t("err.unreachable", url=url, detail=describe_os_error(exc))) from exc
 
 
 class _PromptMixin:
@@ -95,7 +89,7 @@ class MockEmbedder(_PromptMixin):
 
     def __init__(self, model: str, query_prompt: str = "", doc_prompt: str = ""):
         if model not in {"word", "char3"}:
-            raise ProviderError(f"Unknown mock model {model!r}; use mock:word or mock:char3.")
+            raise ProviderError(t("err.mock_unknown", model=model))
         self.spec = f"mock:{model}"
         self.model = model
         self.query_prompt = query_prompt
@@ -131,14 +125,11 @@ def _load_st_model(name: str) -> Any:
     try:
         from sentence_transformers import SentenceTransformer
     except ImportError as exc:
-        raise ProviderError(
-            "The st: provider needs sentence-transformers. Install it with: pip install 'embed-ab[st]' "
-            "(or: uv tool install 'embed-ab[st]')."
-        ) from exc
+        raise ProviderError(t("err.st_missing")) from exc
     try:
         return SentenceTransformer(name, device="cpu")
     except Exception as exc:  # noqa: BLE001 - surface any loader failure with a hint
-        raise ProviderError(f"Could not load model {name!r}: {exc}. {HF_HINT}") from exc
+        raise ProviderError(t("err.st_load", name=name, detail=exc, hint=t("hint.hf"))) from exc
 
 
 class SentenceTransformerEmbedder:
@@ -226,11 +217,9 @@ class OllamaEmbedder(_HttpEmbedder):
         try:
             body = self.transport(f"{host}/api/embed", {"model": self.model, "input": texts}, {})
         except ProviderError as exc:
-            raise ProviderError(
-                f"{exc}. Is Ollama running (`ollama serve`) and the model pulled (`ollama pull {self.model}`)?"
-            ) from exc
+            raise ProviderError(t("err.ollama_down", detail=exc, model=self.model)) from exc
         if "embeddings" not in body:
-            raise ProviderError(f"Unexpected Ollama response (no 'embeddings'): {str(body)[:200]}")
+            raise ProviderError(t("err.ollama_response", body=str(body)[:200]))
         return body["embeddings"]
 
 
@@ -249,7 +238,7 @@ class OpenAIEmbedder(_HttpEmbedder):
         body = self.transport(f"{base}/embeddings", {"model": self.model, "input": texts}, headers)
         data = body.get("data")
         if not isinstance(data, list):
-            raise ProviderError(f"Unexpected response from {base}/embeddings (no 'data'): {str(body)[:200]}")
+            raise ProviderError(t("err.openai_response", base=base, body=str(body)[:200]))
         return [item["embedding"] for item in sorted(data, key=lambda d: d.get("index", 0))]
 
 

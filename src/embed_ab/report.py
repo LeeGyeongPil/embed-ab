@@ -8,6 +8,8 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
+from embed_ab.i18n import get_lang, pad, set_lang, t
+
 TOP_ROWS = 8
 
 CSS = """
@@ -27,30 +29,31 @@ code{background:#eef1f5;padding:1px 4px;border-radius:3px;font-size:13px}
 """
 
 PAGE = Template("""<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><title>embed-ab report: $a vs $b</title>
+<html lang="$lang"><head><meta charset="utf-8"><title>$title</title>
 <meta name="viewport" content="width=device-width,initial-scale=1"><style>$css</style></head>
 <body><main>
-<h1>embed-ab: $a vs $b</h1>
-<p class="sub">$n_queries queries, $n_docs chunks, k = $k, primary metric $primary. Static file: works offline.</p>
+<h1>$heading</h1>
+<p class="sub">$sub</p>
 $notice
-<h2>Warnings</h2>
+<h2>$h_warnings</h2>
 $warnings
-<h2>Summary</h2>
+<h2>$h_summary</h2>
 $summary
-<h2>Difference B &minus; A (95% bootstrap interval)</h2>
-<p class="k">A bar that crosses the 0 line means the difference may be noise. Positive = B is better.</p>
+<h2>$h_ci</h2>
+<p class="k">$note_ci</p>
 $ci_svg
-<h2>Per-query wins and losses</h2>
-<p class="k">Top 3 results per model; <span class="hit">highlighted</span> ids are relevant. Sorted by $primary change (B &minus; A).</p>
+<h2>$h_queries</h2>
+<p class="k">$note_queries</p>
 $queries
-<h2>Top-k overlap between A and B</h2>
-<p class="k">Mean Jaccard@$k = $jac_mean, mean RBO_ext (p=$rbo_p) = $rbo_mean. Low overlap means re-indexing changes what users see, even when metrics look alike.</p>
+<h2>$h_overlap</h2>
+<p class="k">$note_overlap</p>
 $overlap_svg
-<h2>Reproduction</h2>
+<h2>$h_repro</h2>
 $repro
 <script type="application/json" id="embed-ab-data">$data</script>
 </main></body></html>
 """)
+
 
 
 def _e(value: Any) -> str:
@@ -74,8 +77,8 @@ def _summary(result: dict[str, Any]) -> str:
             f'<td class="n">{s["index_seconds"]:.2f}s</td><td class="n">{_e(dim)}</td>'
             f'<td class="n">{s["vector_bytes"] / 1024:.0f} KiB</td></tr>'
         )
-    return (f'<table><tr><th>System</th>{head}<th class="n">index</th><th class="n">dim</th>'
-            f'<th class="n">vectors</th></tr>{"".join(rows)}</table>')
+    return (f'<table><tr><th>{t("html.th_system")}</th>{head}<th class="n">{t("html.th_index")}</th>'
+            f'<th class="n">{t("html.th_dim")}</th><th class="n">{t("html.th_vectors")}</th></tr>{"".join(rows)}</table>')
 
 
 def _ci_svg(result: dict[str, Any]) -> str:
@@ -85,7 +88,7 @@ def _ci_svg(result: dict[str, Any]) -> str:
     zero = left + width / 2
     scale = (width / 2) / lim
     parts = [f'<svg viewBox="0 0 {left + width + 20} {row_h * len(items) + 30}" width="100%" role="img" '
-             f'aria-label="Confidence intervals of metric differences">',
+             f'aria-label="{_e(t("html.ci_label"))}">',
              f'<line x1="{zero}" y1="4" x2="{zero}" y2="{row_h * len(items) + 6}" stroke="#555" stroke-dasharray="4 3"/>']
     for i, (name, v) in enumerate(items):
         y = 20 + i * row_h
@@ -115,7 +118,7 @@ def _queries(result: dict[str, Any], primary: str) -> str:
     worst = [r for r in rows if r["diff_primary"] < 0][:TOP_ROWS]
     best = [r for r in reversed(rows) if r["diff_primary"] > 0][:TOP_ROWS]
     if not worst and not best:
-        return "<p>Every query ties between A and B.</p>"
+        return f'<p>{t("html.all_tie")}</p>'
 
     def block(title: str, picked: list[dict[str, Any]], cls: str) -> str:
         if not picked:
@@ -128,13 +131,12 @@ def _queries(result: dict[str, Any], primary: str) -> str:
                 f'<td class="n {cls}">{r["diff_primary"]:+.3f}</td>'
                 f'<td>{_top_cell(r["A"]["top"], rel)}</td><td>{_top_cell(r["B"]["top"], rel)}</td></tr>'
             )
-        return (f"<h3>{_e(title)}</h3><table><tr><th>Query</th><th class=\"n\">&Delta; {_e(primary)}</th>"
-                f"<th>A top 3</th><th>B top 3</th></tr>{''.join(body)}</table>")
+        return (f"<h3>{_e(title)}</h3><table><tr><th>{t('html.th_query')}</th><th class=\"n\">&Delta; {_e(primary)}</th>"
+                f"<th>{t('html.th_a_top')}</th><th>{t('html.th_b_top')}</th></tr>{''.join(body)}</table>")
 
     wins = result["comparison"]["metrics"][primary]
-    head = (f'<p>B wins on <b>{wins["wins"]}</b> queries, loses on <b>{wins["losses"]}</b>, ties on '
-            f'<b>{wins["ties"]}</b> ({_e(primary)}).</p>')
-    return head + block("Biggest regressions (B worse)", worst, "bad") + block("Biggest improvements (B better)", best, "good")
+    head = "<p>" + t("html.wins", wins=wins["wins"], losses=wins["losses"], ties=wins["ties"], primary=_e(primary)) + "</p>"
+    return head + block(t("html.worst"), worst, "bad") + block(t("html.best"), best, "good")
 
 
 def _histogram(values: list[float], bins: int = 10) -> str:
@@ -143,7 +145,7 @@ def _histogram(values: list[float], bins: int = 10) -> str:
         counts[min(int(v * bins), bins - 1)] += 1
     peak = max(counts) or 1
     w, h = 60, 120
-    parts = [f'<svg viewBox="0 0 {bins * w + 10} {h + 40}" width="100%" role="img" aria-label="Jaccard overlap histogram">']
+    parts = [f'<svg viewBox="0 0 {bins * w + 10} {h + 40}" width="100%" role="img" aria-label="{_e(t("html.hist_label"))}">']
     for i, c in enumerate(counts):
         bh = c / peak * h
         parts.append(
@@ -151,68 +153,122 @@ def _histogram(values: list[float], bins: int = 10) -> str:
             f'<text x="{5 + i * w + (w - 6) / 2}" y="{h + 20}" font-size="11" text-anchor="middle">{i / bins:.1f}</text>'
             f'<text x="{5 + i * w + (w - 6) / 2}" y="{h - bh + 1:.1f}" font-size="11" text-anchor="middle">{c or ""}</text>'
         )
-    parts.append(f'<text x="{bins * w / 2}" y="{h + 36}" font-size="11" text-anchor="middle">Jaccard@k per query (queries per bin)</text></svg>')
+    parts.append(f'<text x="{bins * w / 2}" y="{h + 36}" font-size="11" text-anchor="middle">{_e(t("html.hist_axis"))}</text></svg>')
     return "".join(parts)
 
 
-def render_html(result: dict[str, Any]) -> str:
-    """Render the report; every dynamic value is HTML-escaped."""
+def _warning_texts(result: dict[str, Any], warning_params: list[dict[str, Any]] | None) -> list[str]:
+    """Warning texts in the current language; without ``warning_params`` the stored English text is used."""
+    out = []
+    for i, w in enumerate(result["warnings"]):
+        if warning_params is not None and i < len(warning_params):
+            out.append(t(f"warn.{w['code']}", **warning_params[i]))
+        else:
+            out.append(w["message"])
+    return out
+
+
+def render_html(
+    result: dict[str, Any], lang: str | None = None, warning_params: list[dict[str, Any]] | None = None
+) -> str:
+    """Render the report in ``lang`` (default: current language); every dynamic value is HTML-escaped.
+
+    ``warning_params`` (``CompareResult.warning_params``) lets warnings follow the language; without
+    it they appear as stored in ``result``.
+    """
+    previous = set_lang(lang) if lang else None
+    try:
+        return _render_html(result, warning_params)
+    finally:
+        if previous is not None:
+            set_lang(previous)
+
+
+def _render_html(result: dict[str, Any], warning_params: list[dict[str, Any]] | None) -> str:
     p = result["params"]
     primary = p["primary_metric"]
     sysm = result["systems"]
-    notice = f'<div class="notice">{_e(result["mock_notice"])}</div>' if result["mock_notice"] else ""
-    warnings = "".join(f'<div class="warn"><b>{_e(w["code"])}</b>: {_e(w["message"])}</div>' for w in result["warnings"]) \
-        or "<p>No warnings.</p>"
+    notice = f'<div class="notice">{_e(t("mock.notice"))}</div>' if result["mock_notice"] else ""
+    texts = _warning_texts(result, warning_params)
+    warnings = "".join(f'<div class="warn"><b>{_e(w["code"])}</b>: {_e(text)}</div>'
+                       for w, text in zip(result["warnings"], texts)) or f'<p>{t("html.no_warnings")}</p>'
     repro_rows = []
     for name, s in sysm.items():
         info = {kk: vv for kk, vv in s["info"].items() if vv not in (None, "")}
+        cache = t("html.cache", hits=s["cache_hits"], misses=s["cache_misses"])
         repro_rows.append(f"<tr><td>{_e(name)}</td><td><code>{_e(s['spec'])}</code></td><td>{_e(json.dumps(info, ensure_ascii=False))}</td>"
-                          f"<td>{s['cache_hits']} hits / {s['cache_misses']} misses</td></tr>")
+                          f"<td>{_e(cache)}</td></tr>")
     tool = result["tool"]
-    repro = (f"<table><tr><th>System</th><th>Spec</th><th>Model info (revision, prompts, dim)</th><th>Embedding cache</th></tr>{''.join(repro_rows)}</table>"
-             f'<p class="k">embed-ab {_e(tool["version"])}, Python {_e(tool["python"])}, numpy {_e(tool["numpy"])}, '
-             f'sentence-transformers {_e(tool["sentence_transformers"])}; seed {p["seed"]}, bootstrap {p["bootstrap"]}, '
-             f'BM25 tokenizer {_e(p["bm25"])}.</p>')
+    versions = t("html.versions", version=_e(tool["version"]), python=_e(tool["python"]), numpy=_e(tool["numpy"]),
+                 st=_e(tool["sentence_transformers"]), seed=p["seed"], bootstrap=p["bootstrap"], bm25=_e(p["bm25"]))
+    repro = (f"<table><tr><th>{t('html.th_system')}</th><th>{t('html.th_spec')}</th><th>{t('html.th_info')}</th>"
+             f"<th>{t('html.th_cache')}</th></tr>{''.join(repro_rows)}</table>"
+             f'<p class="k">{versions}</p>')
     ov = result["overlap"]
     data = json.dumps(result, ensure_ascii=False).replace("</", "<\\/")
+    a, b = _e(sysm["A"]["spec"]), _e(sysm["B"]["spec"])
+    n_queries, n_docs = result["evalset"]["queries"], result["evalset"]["documents"]
     return PAGE.substitute(
-        css=CSS, a=_e(sysm["A"]["spec"]), b=_e(sysm["B"]["spec"]), n_queries=result["evalset"]["queries"],
-        n_docs=result["evalset"]["documents"], k=p["k"], primary=_e(primary), notice=notice, warnings=warnings,
-        summary=_summary(result), ci_svg=_ci_svg(result), queries=_queries(result, primary),
-        jac_mean=_fmt(ov["jaccard_mean"]), rbo_mean=_fmt(ov["rbo_mean"]), rbo_p=p["rbo_p"],
-        overlap_svg=_histogram(ov["jaccard"]), repro=repro, data=data,
+        css=CSS, lang=get_lang(), title=t("html.title", a=a, b=b), heading=t("html.heading", a=a, b=b),
+        sub=t("html.sub", n_queries=n_queries, n_docs=n_docs, k=p["k"], primary=_e(primary)),
+        notice=notice, h_warnings=t("html.h_warnings"), warnings=warnings,
+        h_summary=t("html.h_summary"), summary=_summary(result),
+        h_ci=t("html.h_ci"), note_ci=t("html.note_ci"), ci_svg=_ci_svg(result),
+        h_queries=t("html.h_queries"), note_queries=t("html.note_queries", primary=_e(primary)),
+        queries=_queries(result, primary),
+        h_overlap=t("html.h_overlap"),
+        note_overlap=t("html.note_overlap", k=p["k"], jac_mean=_fmt(ov["jaccard_mean"]), rbo_p=p["rbo_p"],
+                       rbo_mean=_fmt(ov["rbo_mean"])),
+        overlap_svg=_histogram(ov["jaccard"]), h_repro=t("html.h_repro"), repro=repro, data=data,
     )
 
 
-def write_report(result: dict[str, Any], html_path: Path | None, json_path: Path | None) -> None:
-    """Write the HTML and/or JSON report, creating parent folders."""
+def write_report(
+    result: dict[str, Any], html_path: Path | None, json_path: Path | None,
+    lang: str | None = None, warning_params: list[dict[str, Any]] | None = None,
+) -> None:
+    """Write the HTML and/or JSON report, creating parent folders.
+
+    The JSON file is identical in every language; only the HTML follows ``lang``.
+    """
     if json_path is not None:
         json_path.parent.mkdir(parents=True, exist_ok=True)
         json_path.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     if html_path is not None:
         html_path.parent.mkdir(parents=True, exist_ok=True)
-        html_path.write_text(render_html(result), encoding="utf-8")
+        html_path.write_text(render_html(result, lang, warning_params), encoding="utf-8")
 
 
-def render_text(result: dict[str, Any]) -> str:
-    """Compact terminal summary."""
+def render_text(
+    result: dict[str, Any], lang: str | None = None, warning_params: list[dict[str, Any]] | None = None
+) -> str:
+    """Compact terminal summary in ``lang`` (default: current language)."""
+    previous = set_lang(lang) if lang else None
+    try:
+        return _render_text(result, warning_params)
+    finally:
+        if previous is not None:
+            set_lang(previous)
+
+
+def _render_text(result: dict[str, Any], warning_params: list[dict[str, Any]] | None) -> str:
     k = result["params"]["k"]
     names = [f"recall@{k}", f"ndcg@{k}", f"mrr@{k}", f"hit@{k}"]
     lines = []
     if result["mock_notice"]:
-        lines += ["*** PRACTICE MOCK MODE (mock embedders: hashed n-gram vectors, not real models) ***", ""]
-    lines.append(f"{result['evalset']['queries']} queries, {result['evalset']['documents']} chunks, k={k}")
-    for w in result["warnings"]:
-        lines.append(f"WARNING [{w['code']}] {w['message']}")
+        lines += [t("text.mock_banner"), ""]
+    lines.append(t("text.summary", queries=result["evalset"]["queries"], docs=result["evalset"]["documents"], k=k))
+    for w, text in zip(result["warnings"], _warning_texts(result, warning_params)):
+        lines.append(t("text.warning", code=w["code"], message=text))
     lines.append("")
-    lines.append(f"{'system':<26}" + "".join(f"{n:>12}" for n in names))
+    lines.append(pad(t("text.system"), 26) + "".join(f"{n:>12}" for n in names))
     for name, s in result["systems"].items():
         lines.append(f"{(name + ' ' + s['spec'])[:25]:<26}" + "".join(f"{s['metrics'][n]:>12.3f}" for n in names))
     lines.append("")
-    lines.append("B - A (95% bootstrap interval, wins/losses/ties)")
+    lines.append(t("text.diff"))
     for n in names:
         d = result["comparison"]["metrics"][n]
         lines.append(f"  {n:<10} {d['mean_diff']:+.3f}  [{d['ci_lo']:+.3f}, {d['ci_hi']:+.3f}]  {d['wins']}/{d['losses']}/{d['ties']}")
     ov = result["overlap"]
-    lines.append(f"top-{k} overlap A vs B: Jaccard {ov['jaccard_mean']:.3f}, RBO_ext {ov['rbo_mean']:.3f}")
+    lines.append(t("text.overlap", k=k, jaccard=ov["jaccard_mean"], rbo=ov["rbo_mean"]))
     return "\n".join(lines)
