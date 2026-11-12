@@ -26,7 +26,7 @@ If you download the repository and use it as a development environment (all the 
 ```bash
 git clone https://github.com/LeeGyeongPil/embed-ab && cd embed-ab
 uv sync
-uv run embed-ab --version      # embed-ab 0.1.1
+uv run embed-ab --version      # embed-ab 0.2.0
 ```
 
 ## Quick start
@@ -56,7 +56,7 @@ report: .../report.html
 json:   .../result.json
 ```
 ![Demo run screen](docs/images/02-demo-run.png)
-*The demo run in a terminal. Progress lines ("indexing ...") may appear below the table, and are omitted from the output block above.*
+*The demo run in a terminal. Progress lines ("indexing ...") appear above the table (they go to stderr), and are omitted from the output block above.*
 
 How to read it:
 - **What is practice mock mode?** A (`mock:char3`) and B (`mock:word`) are fake embedders that vectorize character 3-grams and words by hashing. They have nothing to do with the quality of real models and are **for learning the method**. Real modes (`st:`, `ollama:`, `openai:`) download a model or call a server, so they are slower.
@@ -188,6 +188,7 @@ uv run embed-ab compare ./my-set -a mock:char3 -b mock:word --max-queries 6
 ## Configuration
 | Name | Purpose |
 |---|---|
+| `EMBED_AB_LANG` | Language of messages and reports, `en` or `ko` (see [Language](#language)). `--lang` beats it |
 | `EMBED_AB_CACHE_DIR` | Embedding cache location (default `$XDG_CACHE_HOME/embed-ab`, otherwise `~/.cache/embed-ab`) |
 | `OLLAMA_HOST` | Ollama server address (default `http://localhost:11434`) |
 | `OPENAI_BASE_URL`, `OPENAI_API_KEY` | For the `openai:` provider. A local compatible server often does not need a key |
@@ -200,6 +201,22 @@ All generated files pile up under the cache folder. `embeddings/` is the embeddi
 rm -rf ~/.cache/embed-ab        # EMBED_AB_CACHE_DIR 을 썼다면 그 폴더
 ```
 (The comment says: "or that folder if you used EMBED_AB_CACHE_DIR".)
+
+### Language
+Everything a person reads (help, progress lines, the table, errors, `report.html`) comes in English or Korean. Choose it with `--lang en|ko` (before or after the subcommand), or with environment variables. The first one that is set wins:
+
+1. `--lang en|ko`
+2. `EMBED_AB_LANG`
+3. `LC_ALL`
+4. `LC_MESSAGES`
+5. `LANG`
+
+A value starting with `ko` (`ko`, `ko_KR.UTF-8`) selects Korean; anything else, an empty value or nothing at all selects English (an empty variable counts as unset). A bad `--lang` value is rejected with exit code 2.
+```bash
+uv run embed-ab --lang ko demo          # Korean table and Korean report.html
+EMBED_AB_LANG=ko uv run embed-ab demo   # the same, from the environment
+```
+`result.json` does **not** change with the language: keys, numbers and the warning `code` and `message` strings are identical (the messages stay English), and so are the exit codes (0, 1, 2). Only the text for people changes, so a CI gate should decide by exit code and not by grepping words such as `FAIL`. Metric names, model ids and your own questions are never translated.
 
 ### How to read the report
 `report.html` has the following order from top to bottom.
@@ -264,7 +281,7 @@ Public leaderboards are better as a starting point for picking candidate models.
 uv sync
 uv run pytest
 ```
-If `77 passed` appears on the last line, all is well (the configuration already has `-q`, so adding `-q` again makes the summary line disappear). All 77 tests pass (Python 3.12 and 3.13, run with the network blocked). Please leave bugs and suggestions as issues. The change log is [CHANGELOG.md](CHANGELOG.md).
+If `116 passed` appears on the last line, all is well (the configuration already has `-q`, so adding `-q` again makes the summary line disappear). All 116 tests pass (Python 3.12 and 3.13, run with the network blocked). Please leave bugs and suggestions as issues. The change log is [CHANGELOG.md](CHANGELOG.md).
 
 Code map (`src/embed_ab/`):
 
@@ -278,6 +295,7 @@ Code map (`src/embed_ab/`):
 | `providers.py` | The `mock:`, `st:`, `ollama:` and `openai:` embedding providers |
 | `report.py` | The single HTML report |
 | `evalset.py` | Reading and validating BEIR-format evaluation sets |
+| `i18n.py` | English and Korean message tables, language priority, localized error details |
 
 ## Glossary
 - **Embedding**: text turned into a numeric vector. Texts with similar meaning have close vectors.

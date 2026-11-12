@@ -5,6 +5,17 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and 
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-12
+
+### Added
+- English and Korean output. `--lang en|ko` (before or after the subcommand) or the `EMBED_AB_LANG` environment variable selects the language of help, progress lines, tables, errors, the text summary and `report.html`; without them `LC_ALL`, `LC_MESSAGES` and `LANG` decide (a value starting with `ko` means Korean, everything else English).
+- Errors that wrap OS or JSON problems (missing file, permission denied, invalid UTF-8, JSON syntax) now explain the cause in the selected language. Unreadable evaluation set and document files are reported as input errors (exit code 2) instead of a traceback.
+- `<html lang>` of `report.html` follows the selected language.
+
+### Changed
+- `result.json` is unchanged and language independent: keys, numbers, and the English warning `code` and `message` strings are identical in every language, and so are the exit codes (0, 1, 2).
+- Human-readable text such as the `FAIL` / `PASS` word of the gate line is translated when Korean is selected (for example by `LANG=ko_KR.UTF-8`); scripts should read the exit code instead of grepping the text. Set `EMBED_AB_LANG=en` to keep the English text.
+
 ## [0.1.1] - 2026-11-10
 
 ### Fixed
