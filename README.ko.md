@@ -80,7 +80,7 @@ JSON:   .../result.json
 | `ollama:` | `ollama:bge-m3` | 로컬 Ollama 서버(`OLLAMA_HOST`) |
 | `openai:` | `openai:text-embedding-3-small` | OpenAI 호환 API(`OPENAI_BASE_URL`, `OPENAI_API_KEY`) |
 
-`compare` 의 주요 옵션: `--bm25 [word|char2]`(BM25 기준선 추가, 한국어는 `char2` 권장), `-k`(기본 10), `--max-queries N`, `--seed`, `--bootstrap`, `--report`/`--json`/`--out`(저장 위치), `--no-cache`, `--a-query-prompt --a-doc-prompt --b-query-prompt --b-doc-prompt`(E5·BGE 처럼 질문·문서에 접두어가 필요한 모델), `--fail-if-worse METRIC@K:DELTA`.
+`compare` 의 주요 옵션: `--bm25 [word|char2]`(BM25 기준선 추가, 한국어는 `char2` 권장), `-k`(기본 10), `--max-queries N`, `--seed`, `--bootstrap`(1 이상, 아니면 종료 코드 2), `--report`/`--json`/`--out`(저장 위치), `--no-cache`, `--a-query-prompt --a-doc-prompt --b-query-prompt --b-doc-prompt`(E5·BGE 처럼 질문·문서에 접두어가 필요한 모델), `--fail-if-worse METRIC@K:DELTA`.
 
 ### 시나리오 1 — 내장 평가 세트로 `compare` 를 직접 돌려 보기
 ```bash
@@ -275,7 +275,7 @@ flowchart LR
 uv sync
 uv run pytest
 ```
-마지막 줄에 `116 passed` 가 보이면 정상입니다(설정에 이미 `-q` 가 있어 `-q` 를 또 붙이면 요약 줄이 사라집니다). 테스트 116개가 통과합니다(Python 3.12·3.13, 네트워크 차단 상태에서 실행). 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
+마지막 줄에 `116 passed, 1 skipped` 가 보이면 정상입니다(설정에 이미 `-q` 가 있어 `-q` 를 또 붙이면 요약 줄이 사라집니다). 테스트 116개가 통과하고 1개는 건너뜁니다(Python 3.12·3.13, 네트워크 차단 상태에서 실행). 버그·제안은 이슈로 남겨 주세요. 변경 기록은 [CHANGELOG.md](CHANGELOG.md).
 
 코드 지도(`src/embed_ab/`):
 

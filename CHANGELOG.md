@@ -3,7 +3,10 @@
 All notable changes to this project are documented here.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [0.2.1] - 2026-11-18
+
+### Fixed
+- `--bootstrap 0` or a negative value is now rejected as an input error (`error: --bootstrap must be at least 1.`, exit code 2) instead of ending with a traceback and exit code 1.
 
 ## [0.2.0] - 2026-11-12
 

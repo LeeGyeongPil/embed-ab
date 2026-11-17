@@ -80,7 +80,7 @@ A model is specified as `provider:name`.
 | `ollama:` | `ollama:bge-m3` | Local Ollama server (`OLLAMA_HOST`) |
 | `openai:` | `openai:text-embedding-3-small` | OpenAI-compatible API (`OPENAI_BASE_URL`, `OPENAI_API_KEY`) |
 
-Main options of `compare`: `--bm25 [word|char2]` (adds a BM25 baseline; `char2` is recommended for Korean), `-k` (default 10), `--max-queries N`, `--seed`, `--bootstrap`, `--report`/`--json`/`--out` (save locations), `--no-cache`, `--a-query-prompt --a-doc-prompt --b-query-prompt --b-doc-prompt` (for models like E5 and BGE that need a prefix on queries and documents), `--fail-if-worse METRIC@K:DELTA`.
+Main options of `compare`: `--bm25 [word|char2]` (adds a BM25 baseline; `char2` is recommended for Korean), `-k` (default 10), `--max-queries N`, `--seed`, `--bootstrap` (1 or more; otherwise exit code 2), `--report`/`--json`/`--out` (save locations), `--no-cache`, `--a-query-prompt --a-doc-prompt --b-query-prompt --b-doc-prompt` (for models like E5 and BGE that need a prefix on queries and documents), `--fail-if-worse METRIC@K:DELTA`.
 
 ### Scenario 1 — Run `compare` yourself with the built-in evaluation set
 ```bash
@@ -281,7 +281,7 @@ Public leaderboards are better as a starting point for picking candidate models.
 uv sync
 uv run pytest
 ```
-If `116 passed` appears on the last line, all is well (the configuration already has `-q`, so adding `-q` again makes the summary line disappear). All 116 tests pass (Python 3.12 and 3.13, run with the network blocked). Please leave bugs and suggestions as issues. The change log is [CHANGELOG.md](CHANGELOG.md).
+If `116 passed, 1 skipped` appears on the last line, all is well (the configuration already has `-q`, so adding `-q` again makes the summary line disappear). 116 tests pass and 1 is skipped (Python 3.12 and 3.13, run with the network blocked). Please leave bugs and suggestions as issues. The change log is [CHANGELOG.md](CHANGELOG.md).
 
 Code map (`src/embed_ab/`):
 
