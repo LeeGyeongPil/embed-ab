@@ -113,6 +113,8 @@ def compare(
     """
     if k < 1:
         raise EvalSetError(t("err.k_min"))
+    if n_boot < 1:
+        raise EvalSetError(t("err.bootstrap_min"))
     if bm25 is not None and bm25 not in TOKENIZERS:
         raise EvalSetError(t("err.bm25_unknown", name=bm25, choices=", ".join(TOKENIZERS)))
     if a == b and embedders is None:

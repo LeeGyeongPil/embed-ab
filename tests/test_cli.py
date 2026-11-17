@@ -62,3 +62,13 @@ def test_few_queries_triggers_warning(demo_dir, tmp_path, capsys):
 def test_python_dash_m_and_version():
     out = subprocess.run([sys.executable, "-m", "embed_ab", "--version"], capture_output=True, text=True, check=True)
     assert out.stdout.startswith("embed-ab ")
+
+
+def test_bootstrap_below_one_is_input_error(demo_dir, tmp_path, capsys):
+    for value in ("0", "-5"):
+        assert run(demo_dir, "mock:word", "mock:char3", "--bootstrap", value, "--lang", "en", out=tmp_path / "r") == 2
+        err = capsys.readouterr().err
+        assert "--bootstrap must be at least 1." in err
+        assert "Traceback" not in err
+    assert run(demo_dir, "mock:word", "mock:char3", "--bootstrap", "0", "--lang", "ko", out=tmp_path / "r") == 2
+    assert "--bootstrap 은 1 이상이어야 합니다." in capsys.readouterr().err
